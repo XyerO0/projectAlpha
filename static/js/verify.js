@@ -186,3 +186,54 @@ document.addEventListener("DOMContentLoaded", function () {
     return "badge-unknown";
   }
 });
+
+// Document image preview
+const documentFile = document.getElementById("documentFile");
+const documentPreview = document.getElementById("documentPreview");
+const previewContainer = document.getElementById("previewContainer");
+const removeFile = document.getElementById("removeFile");
+
+documentFile.addEventListener("change", function () {
+    const file = this.files[0];
+
+    if (!file) {
+        previewContainer.classList.add("hidden");
+        return;
+    }
+
+    // Check file type
+    const allowedTypes = ["image/jpeg", "image/png"];
+
+    if (!allowedTypes.includes(file.type)) {
+        alert("Please select a JPG, JPEG or PNG image.");
+        this.value = "";
+        previewContainer.classList.add("hidden");
+        return;
+    }
+
+    // Check file size (5 MB)
+    if (file.size > 5 * 1024 * 1024) {
+        alert("File size must be less than 5 MB.");
+        this.value = "";
+        previewContainer.classList.add("hidden");
+        return;
+    }
+
+    // Display preview
+    const reader = new FileReader();
+
+    reader.onload = function (event) {
+        documentPreview.src = event.target.result;
+        previewContainer.classList.remove("hidden");
+    };
+
+    reader.readAsDataURL(file);
+});
+
+
+// Remove selected document
+removeFile.addEventListener("click", function () {
+    documentFile.value = "";
+    documentPreview.src = "";
+    previewContainer.classList.add("hidden");
+});

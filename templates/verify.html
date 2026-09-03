@@ -47,9 +47,43 @@
           </div>
 
           <div class="form-group">
-            <label for="documentFile">Upload Document Image *</label>
-            <input type="file" id="documentFile" name="documentFile" accept=".jpg,.jpeg,.png" required>
-            <small class="hint">Supported: JPG, JPEG, PNG (max 5 MB)</small>
+            <label for="documentFile">Scan / Upload Document *</label>
+
+            <div class="scanner-box" id="scannerBox">
+              <div class="scanner-icon">📄</div>
+
+              <p class="scanner-title">Choose your document</p>
+
+              <p class="scanner-hint">
+                JPG, JPEG or PNG • Maximum 5 MB
+              </p>
+
+              <label for="documentFile" class="choose-file-btn">
+                Choose Document
+              </label>
+
+              <input
+                type="file"
+                id="documentFile"
+                name="documentFile"
+                accept=".jpg,.jpeg,.png"
+                required
+                hidden
+              />
+            </div>
+
+            <!-- Image preview -->
+            <div id="previewContainer" class="preview-container hidden">
+              <p>Document Preview</p>
+              <img id="documentPreview" src="" alt="Document preview">
+              <button type="button" id="removeFile" class="remove-btn">
+                Remove
+              </button>
+            </div>
+
+            <small class="hint">
+              Make sure the document is clear and readable.
+            </small>
           </div>
 
           <button type="submit" class="btn primary-btn" id="submitBtn">Verify Document</button>
