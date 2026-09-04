@@ -3,14 +3,16 @@ from werkzeug.utils import secure_filename
 from ai_detector import analyze_document_with_ai
 
 import os
+
+from database import init_database, save_verification, get_history
+
 import uuid
 
 from utils import process_document, calculate_combined_risk, get_combined_risk_level
 
 
 app = Flask(__name__)
-
-
+init_database()
 # =========================================================
 # CONFIGURATION
 # =========================================================
@@ -454,8 +456,55 @@ def api_verify():
             }
 
         result["final_risk"] = final_risk
+        # -----------------------------------------
+        # Save verification history
+        # -----------------------------------------
+        try:
+            history_data = {
+                "document_type": docType,
+                "entered_name": name,
 
+                "entered_document_number": mask_document_number(
+                    result["document"]["entered_number"],
+                    docType
+                ),
 
+                "detected_document_number": mask_document_number(
+                    result["document"]["detected_number"],
+                    docType
+                ),
+
+                "document_status": (
+                    "Match"
+                    if result["document"]["number_match"]
+                    else "Mismatch"
+                ),
+
+                "name_similarity": result["identity"]["name_similarity"],
+
+                "format_valid": result["document"]["format_valid"],
+
+                "rule_risk_score": result["risk"]["score"],
+                "rule_risk_level": result["risk"]["level"],
+
+                "ai_status": (
+                    "available"
+                    if ai_result.get("status") == "available"
+                    else "unavailable"
+                ),
+
+                "ai_suspicious": ai_result.get("suspicious"),
+                "ai_confidence": ai_result.get("confidence"),
+                "ai_risk_score": ai_result.get("risk_score"),
+                "ai_reasons": ", ".join(ai_result.get("reasons", [])),
+
+                "final_risk_score": final_risk["score"],
+                "final_risk_level": final_risk["level"]
+            }
+            save_verification(history_data)
+
+        except Exception as e:
+            print("Database save error:", e)
         # -----------------------------------------
         # Return final result
         # -----------------------------------------
@@ -471,6 +520,57 @@ def api_verify():
 
         delete_file(filepath)
 
+@app.route("/api/history", methods=["GET"])
+def api_history():
+    try:
+        history = get_history(limit=20)
+
+        safe_history = []
+
+        for record in history:
+            safe_history.append({
+                "id": record["id"],
+                "document_type": record["document_type"],
+                "masked_document_number": record["detected_document_number"],
+                "risk_level": record["final_risk_level"],
+                "final_risk_score": record["final_risk_score"],
+                "created_at": record["created_at"]
+            })
+
+        return {
+            "success": True,
+            "history": safe_history
+        }, 200
+
+    except Exception as e:
+        print("Database history error:", e)
+
+        return {
+            "success": False,
+            "error": "Could not retrieve verification history"
+        }, 500
+    
+def mask_document_number(document_number, document_type):
+    """Return a privacy-safe masked document number."""
+
+    if not document_number:
+        return None
+
+    value = str(document_number).replace(" ", "").strip()
+
+    if document_type == "aadhaar":
+        # Aadhaar: show only last 4 digits
+        return "XXXX XXXX " + value[-4:]
+
+    if document_type == "pan":
+        # PAN: show only last 4 characters
+        return "XXXXX" + value[-4:]
+
+    if document_type == "visa":
+        # Visa: show only last 4 characters
+        return "XXXX" + value[-4:]
+
+    return "XXXX" + value[-4:]
 
 # =========================================================
 # HEALTH-CHECK
